@@ -8,7 +8,8 @@ dotenv.config();
 const PORT = process.env.PORT || 3001;
 
 // Placeholder data for users
-const users = [];
+const users: { id: string; username: string; age: number; hobbies: string[] }[] = [];
+
 
 const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   if (req.url === '/api/users' && req.method === 'GET') {
@@ -43,7 +44,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
         res.statusCode = 400;
         res.end(JSON.stringify({ message: 'Username and age are required' }));
       } else {
-        const generatedId = uuidv4;
+        const generatedId = uuidv4();
         const createdUser = { id: generatedId, ...newUser, hobbies: newUser.hobbies || [] };
         users.push(createdUser);
 
