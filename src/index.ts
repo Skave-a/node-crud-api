@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { IncomingMessage, ServerResponse, createServer } from 'node:http';
 import { v4 as uuidv4 } from "uuid";
+import { validate as validateUuid } from 'uuid';
 
 dotenv.config();
 
@@ -18,16 +19,23 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     res.end(JSON.stringify(users));
   } else if (req.url?.startsWith('/api/users/') && req.method === 'GET') {
     const userId = req.url.split('/')[3];
-    const user = users.find((u) => u.id === userId);
 
-    if (user) {
+    if (!validateUuid(userId)) {
       res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 200;
-      res.end(JSON.stringify(user));
+      res.statusCode = 400;
+      res.end(JSON.stringify({ message: 'Invalid userId' }));
     } else {
-      res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 404;
-      res.end(JSON.stringify({ message: 'User not found' }));
+      const user = users.find((u) => u.id === userId);
+
+      if (user) {
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({ ...user, id: undefined }));
+      } else {
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 404;
+        res.end(JSON.stringify({ message: 'User not found' }));
+      }
     }
   } else if (req.url === '/api/users' && req.method === 'POST') {
     let body = '';
