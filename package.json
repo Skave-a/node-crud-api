@@ -2,10 +2,10 @@
   "name": "crud-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
-      "start:dev": "nodemon server.js",
-      "start:prod": "npm run build && node dist/server.js",
+      "start:dev": "nodemon src/index.ts",
+      "start:prod": "npm run build && node dist/index.js",
       "build": "tsc",
       "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
