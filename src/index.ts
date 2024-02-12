@@ -1,13 +1,13 @@
-import dotenv from 'dotenv';
 import { IncomingMessage, ServerResponse, createServer } from 'node:http';
 import { handleGetUsers, handleGetUser, handleCreateUser, handleUpdateUser, handleDeleteUser } from './router/Router';
+import * as dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config({path: __dirname + '/.env'})
 
 // Constants
 const PORT = process.env.PORT || 3001;
 
-const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+export const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   try {
     if (req.url === '/api/users' && req.method === 'GET') {
       handleGetUsers(req, res);

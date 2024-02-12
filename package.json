@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "type": "module",
   "scripts": {
       "start:dev": "nodemon src/index.ts",
       "start:prod": "npm run build && node dist/index.js",
       "build": "tsc",
-      "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+      "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+      "test": "jest  ./tests"
   },
   "author": "skave-a",
   "license": "ISC",
