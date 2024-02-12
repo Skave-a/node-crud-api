@@ -1,7 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 
-// Placeholder data for users
 const users: { id: string; username: string; age: number; hobbies: string[] }[] = [];
 
 export function handleGetUsers(req: IncomingMessage, res: ServerResponse) {
