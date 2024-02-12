@@ -1,40 +1,18 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "target": "ESNext",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext"
-    ],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "*": [
-        "*",
-        "src/*"
-      ]
-    }
+    "target": "ESNext",
+    "sourceMap": false,
+    "outDir": "dist",
+    "noImplicitAny": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig"
-    }
-  ]
+  "lib": ["ESNext"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
