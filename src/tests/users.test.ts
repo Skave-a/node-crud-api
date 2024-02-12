@@ -1,10 +1,12 @@
 import { server } from '../index';
 import { handleGetUsers, handleGetUser, handleCreateUser, handleUpdateUser, handleDeleteUser } from '../router/Router';
+import { Server } from 'http';
 
-const PORT = 3001;
+const PORT = 3000;
 
 describe('API Tests', () => {
-  let serverInstance;
+  
+  let serverInstance: Server;
 
   beforeAll(() => {
     server.close();
