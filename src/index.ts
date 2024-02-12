@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import { IncomingMessage, ServerResponse, createServer } from 'node:http';
-import { v4 as uuidv4 } from "uuid";
-import { validate as validateUuid } from 'uuid';
+import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 
 dotenv.config();
 
@@ -10,7 +9,6 @@ const PORT = process.env.PORT || 3001;
 
 // Placeholder data for users
 const users: { id: string; username: string; age: number; hobbies: string[] }[] = [];
-
 
 const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   try {

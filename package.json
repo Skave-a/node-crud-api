@@ -4,14 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon ./src/index.ts",
-    "start": "node dist/bundle.js",
-    "start:dev": "nodemon --exec npx ts-node src/index.ts",
-    "start:prod": "npm run build && npm run start",
-    "start:multi": "nodemon --exec npx ts-node src/index-cluster.ts",
-    "lint": "eslint . --ext .ts",
-    "test": "jest  ./tests",
-    "server": "ts-node --esm src/index.ts"
+      "start:dev": "nodemon server.js",
+      "start:prod": "npm run build && node dist/server.js",
+      "build": "tsc",
+      "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "author": "skave-a",
   "license": "ISC",
