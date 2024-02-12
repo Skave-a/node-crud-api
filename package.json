@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --experimental-specifier-resolution=node --loader ts-node/esm ./src/index.ts",
+    "dev": "nodemon ./src/index.ts",
     "start": "node dist/bundle.js",
     "start:dev": "nodemon --exec npx ts-node src/index.ts",
     "start:prod": "npm run build && npm run start",
