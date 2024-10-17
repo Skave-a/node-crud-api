@@ -1,60 +1,47 @@
-import cluster, { Worker } from 'cluster';
-import * as dotenv from 'dotenv';
-import http, { IncomingMessage, ServerResponse } from 'http';
-import os from 'os';
-import { handleCreateUser, handleDeleteUser, handleGetUser, handleGetUsers, handleUpdateUser } from './router/Router';
+import cluster from "cluster";
+import http, { IncomingMessage, ServerResponse } from "http";
+import { cpus } from "os";
 
-dotenv.config({ path: __dirname + '/.env' });
+const PORT = parseInt(process.env.PORT || "4000", 10);
+const numCPUs = cpus().length - 1;
+let currentWorker = 0;
 
-const numCPUs = os.cpus().length;
-const PORT = parseInt(process.env.PORT || '4000', 10);
+const handleRequest = (req: IncomingMessage, res: ServerResponse) => {
+  const workerPort = PORT + 1 + (currentWorker % numCPUs);
+  const proxyReq = http.request(
+    {
+      hostname: "localhost",
+      port: workerPort,
+      path: req.url,
+      method: req.method,
+      headers: req.headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
+
+  req.pipe(proxyReq, { end: true });
+  currentWorker++;
+};
 
 if (cluster.isPrimary) {
-  for (let i = 0; i < numCPUs - 1; i++) {
+  console.log(`Master process is running. Spawning ${numCPUs} workers...`);
+
+  for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
   }
 
-  const workers: Worker[] = Object.values(cluster.workers || {}) as Worker[];
-
-  let nextWorkerIndex = 0;
-
-  const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-    const worker = workers[nextWorkerIndex];
-    worker.send({ type: 'request', req, res });
-    nextWorkerIndex = (nextWorkerIndex + 1) % workers.length;
+  const server = http.createServer(handleRequest);
+  server.listen(PORT, () => {
+    console.log(`Load balancer is running on http://localhost:${PORT}/api`);
   });
 
-  server.listen(PORT, () => {
-    console.log(`Load balancer is listening on port ${PORT}`);
+  cluster.on("exit", (worker) => {
+    console.log(`Worker ${worker.process.pid} died. Spawning a new worker...`);
+    cluster.fork();
   });
 } else {
-  const workerPort = PORT + (cluster.worker?.id ?? 0);
-  const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
-    try {
-      if (req.url === '/api/users' && req.method === 'GET') {
-        handleGetUsers(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'GET') {
-        handleGetUser(req, res);
-      } else if (req.url === '/api/users' && req.method === 'POST') {
-        handleCreateUser(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'PUT') {
-        handleUpdateUser(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'DELETE') {
-        handleDeleteUser(req, res);
-      } else {
-        res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 404;
-        res.end(JSON.stringify({ message: 'Route not found' }));
-      }
-    } catch (err) {
-      console.error(err);
-      res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 500;
-      res.end(JSON.stringify({ message: 'server err' }));
-    }
-  });
-
-  server.listen(workerPort, () => {
-    console.log(`Worker ${cluster.worker?.id ?? 0} is running on port ${workerPort}`);
-  });
+  import("./index");
 }

@@ -1,105 +1,214 @@
-import { server } from '../index';
-import { handleGetUsers, handleGetUser, handleCreateUser, handleUpdateUser, handleDeleteUser } from '../router/Router';
-import { Server } from 'http';
+import http from "http";
+import { server } from "..";
+import { User } from "../types";
 
-const PORT = 3000;
+const makeRequest = (options: http.RequestOptions, body?: object) => {
+  return new Promise<{ statusCode: number; data: string }>(
+    (resolve, reject) => {
+      const req = http.request(options, (res) => {
+        let data = "";
 
-describe('API Tests', () => {
-  
-  let serverInstance: Server;
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
 
-  beforeAll(() => {
-    server.close();
+        res.on("end", () => {
+          resolve({ statusCode: res.statusCode || 500, data });
+        });
+      });
 
-    process.env.PORT = String(PORT);
+      req.on("error", (e) => {
+        console.error(`Request error: ${e.message}`);
+        reject(e);
+      });
 
-    serverInstance = server.listen(PORT);
-  });
+      if (body) {
+        req.write(JSON.stringify(body));
+      }
 
-  afterAll((done) => {
-    serverInstance.close();
+      req.end();
+    }
+  );
+};
+
+describe("User API test scenarios", () => {
+  let userId: string;
+
+  beforeAll((done) => {
+    if (!server.listening) {
+      console.error("Server is not running!");
+    } else {
+      console.log(`Server is running on port 4000`);
+    }
     done();
   });
 
-  beforeEach(() => {
-    server.on('request', (req, res) => {
-      if (req.url === '/api/users/' && req.method === 'GET') {
-        handleGetUsers(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'GET') {
-        handleGetUser(req, res);
-      } else if (req.url === '/api/users' && req.method === 'POST') {
-        handleCreateUser(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'PUT') {
-        handleUpdateUser(req, res);
-      } else if (req.url?.startsWith('/api/users/') && req.method === 'DELETE') {
-        handleDeleteUser(req, res);
+  afterAll((done) => {
+    console.log("Closing server...");
+    server.close((err) => {
+      if (err) {
+        console.error("Error closing server:", err);
+        done(err);
       } else {
-        res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 404;
-        res.end(JSON.stringify({ message: 'Route not found' }));
+        console.log("Server closed successfully");
+        done();
       }
     });
   });
 
-  afterEach(() => {
-    server.removeAllListeners('request');
-  });
-
-  it('should return an empty array when getting all users', async () => {
-    const response = await fetch(`http://localhost:${PORT}/api/users`);
-    const users = await response.json();
-
-    expect(response.status).toEqual(200);
-    expect(users).toEqual([]);
-  });
-
-  it('should create a new user and return the created user', async () => {
-    const newUser = {
-      username: 'Skave',
-      age: 20,
-      hobbies: ['reading', 'dancing']
+  it("should return an empty array when no users exist", async () => {
+    const options = {
+      hostname: "localhost",
+      port: 4000,
+      path: "/api/users",
+      method: "GET",
     };
 
-    const response = await fetch(`http://localhost:${PORT}/api/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newUser)
-    });
+    try {
+      const { statusCode, data } = await makeRequest(options);
+      const response = JSON.parse(data);
 
-    const createdUser = await response.json();
+      console.log("Response data:", response);
 
-    expect(response.status).toEqual(201);
-    expect(createdUser).toMatchObject(newUser);
-    expect(createdUser.id).toBeDefined();
+      expect(statusCode).toBe(200);
+      expect(response).toEqual([]);
+    } catch (error) {
+      console.error("Test failed with error:", error);
+      throw error;
+    }
   });
 
-  it('should return the user with the specified id', async () => {
-    const user = {
-      id: '1f691d67-67e0-4247-bb1d-931a516f595b',
-      username: 'Skave',
-      age: 20,
-      hobbies: ['reading', 'dancing']
+  it("should create a new user", async () => {
+    const userData: Omit<User, "id"> = {
+      username: "JohnDoe",
+      age: 30,
+      hobbies: ["reading", "sports"],
     };
 
-    const response = await fetch(`http://localhost:${PORT}/api/users/${user.id}`);
-    const foundUser = await response.json();
+    const postOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: "/api/users",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
 
-    expect(response.status).toEqual(200);
-    expect(foundUser).toMatchObject(user);
+    const postResponse = await makeRequest(postOptions, userData);
+    const createdUser = JSON.parse(postResponse.data);
+
+    expect(postResponse.statusCode).toBe(201);
+    expect(createdUser.username).toBe(userData.username);
+
+    userId = createdUser.id;
+    console.log(`Created user ID: ${userId}`);
   });
 
-  it('should update the user with the specified id', async () => {
-    const user = {
-      id: '1f691d67-67e0-4247-bb1d-931a516f595b',
-      username: 'Skave',
-      age: 20,
-      hobbies: ['reading', 'dancing']
+  it("should retrieve the created user by ID", async () => {
+    const getOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: `/api/users/${userId}`,
+      method: "GET",
     };
 
-    const response = await fetch(`http://localhost:${PORT}/api/users/${user.id}`);
-    const notFoundResponse = await response.json();
+    const getResponse = await makeRequest(getOptions);
+    const retrievedUser = JSON.parse(getResponse.data);
 
-    expect(response.status).toEqual(404);
-    expect(notFoundResponse.message).toEqual('User not found');
+    expect(getResponse.statusCode).toBe(200);
+    expect(retrievedUser.id).toBe(userId);
+    expect(retrievedUser.username).toBe("JohnDoe");
+  });
+
+  it("should update the user", async () => {
+    const updatedUserData: Omit<User, "id"> = {
+      username: "JaneDoe",
+      age: 28,
+      hobbies: ["music", "traveling"],
+    };
+
+    const putOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: `/api/users/${userId}`,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const putResponse = await makeRequest(putOptions, updatedUserData);
+    const updatedUser = JSON.parse(putResponse.data);
+
+    expect(putResponse.statusCode).toBe(200);
+    expect(updatedUser.username).toBe(updatedUserData.username);
+    expect(updatedUser.age).toBe(updatedUserData.age);
+  });
+
+  it("should delete the user", async () => {
+    const deleteOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: `/api/users/${userId}`,
+      method: "DELETE",
+    };
+
+    const deleteResponse = await makeRequest(deleteOptions);
+    expect(deleteResponse.statusCode).toBe(204);
+
+    const getOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: `/api/users/${userId}`,
+      method: "GET",
+    };
+
+    const getResponse = await makeRequest(getOptions);
+    expect(getResponse.statusCode).toBe(404);
+  });
+
+  it("should return an error when creating a user with invalid data", async () => {
+    const invalidUserData = {
+      username: "",
+      age: -1,
+      hobbies: [""],
+    };
+
+    const postOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: "/api/users",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const postResponse = await makeRequest(postOptions, invalidUserData);
+    expect(postResponse.statusCode).toBe(400);
+  });
+
+  it("should return an error when updating a non-existent user", async () => {
+    const nonExistentUserId = "42efffa7-13fe-4288-a578-095c03a0a702";
+
+    const updatedUserData: Omit<User, "id"> = {
+      username: "NonExistentUser",
+      age: 40,
+      hobbies: ["nothing"],
+    };
+
+    const putOptions = {
+      hostname: "localhost",
+      port: 4000,
+      path: `/api/users/${nonExistentUserId}`,
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    const putResponse = await makeRequest(putOptions, updatedUserData);
+    expect(putResponse.statusCode).toBe(404);
   });
 });

@@ -1,37 +1,43 @@
-import { IncomingMessage, ServerResponse, createServer } from 'node:http';
-import { handleGetUsers, handleGetUser, handleCreateUser, handleUpdateUser, handleDeleteUser } from './router/Router';
-import * as dotenv from 'dotenv'
+import http from "http";
+import cluster from "cluster";
+import {
+  getUsers,
+  getUser,
+  addUser,
+  updateUser,
+  removeUser,
+} from "./controllers";
+import { parse } from "url";
 
-dotenv.config()
+const PORT =
+  parseInt(process.env.PORT || "4000", 10) + (cluster.worker?.id || 0);
 
-// Constants
-const PORT = process.env.PORT || 3001;
+const requestHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) => {
+  const url = parse(req.url || "", true);
+  const method = req.method;
 
-export const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-  try {
-    if (req.url === '/api/users' && req.method === 'GET') {
-      handleGetUsers(req, res);
-    } else if (req.url?.startsWith('/api/users/') && req.method === 'GET') {
-      handleGetUser(req, res);
-    } else if (req.url === '/api/users' && req.method === 'POST') {
-      handleCreateUser(req, res);
-    } else if (req.url?.startsWith('/api/users/') && req.method === 'PUT') {
-      handleUpdateUser(req, res);
-    } else if (req.url?.startsWith('/api/users/') && req.method === 'DELETE') {
-      handleDeleteUser(req, res);
-    } else {
-      res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 404;
-      res.end(JSON.stringify({ message: 'Route not found' }));
+  if (url.pathname?.startsWith("/api/users")) {
+    if (method === "GET" && url.pathname === "/api/users") {
+      return getUsers(req, res);
+    } else if (method === "GET" && url.pathname?.startsWith("/api/users/")) {
+      return getUser(req, res);
+    } else if (method === "POST" && url.pathname === "/api/users") {
+      return addUser(req, res);
+    } else if (method === "PUT" && url.pathname?.startsWith("/api/users/")) {
+      return updateUser(req, res);
+    } else if (method === "DELETE" && url.pathname?.startsWith("/api/users/")) {
+      return removeUser(req, res);
     }
-  } catch (err) {
-    console.error(err);
-    res.setHeader('Content-Type', 'application/json');
-    res.statusCode = 500;
-    res.end(JSON.stringify({ message: 'Внутренняя ошибка сервера' }));
   }
-});
 
+  res.writeHead(404);
+  res.end("Not Found");
+};
+
+export const server = http.createServer(requestHandler);
 server.listen(PORT, () => {
-  console.log(`Server is running at ${PORT}/`);
+  console.log(`Worker ${process.pid} listening on port ${PORT}`);
 });
